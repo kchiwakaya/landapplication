@@ -23,12 +23,14 @@ else
   sudo usermod -aG docker "$APP_USER" || true
 fi
 
-echo "==> [2/6] Configuring UFW firewall & Fail2Ban..."
+echo "==> [2/6] Configuring UFW firewall & Fail2Ban (and freeing ports 80/443)..."
+sudo systemctl disable --now nginx apache2 2>/dev/null || true
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
+sudo ufw delete allow 8000/tcp 2>/dev/null || true
 sudo ufw --force enable
 sudo systemctl enable --now fail2ban || true
 
