@@ -67,8 +67,8 @@ POSTGRES_PASSWORD=${DB_PASS}
 
 HTTP_PORT=80
 HTTPS_PORT=443
-SEED_DEMO=true
-SEED_DEMO_COUNT=40
+SEED_DEMO=false
+SEED_DEMO_COUNT=0
 GUNICORN_WORKERS=3
 
 # Farmer notifications (Google SMTP - fill in credentials to enable live email)

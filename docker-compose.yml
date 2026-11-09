@@ -47,8 +47,8 @@ services:
       SMS_GATEWAY_URL: ${SMS_GATEWAY_URL:-}
       SMS_GATEWAY_API_KEY: ${SMS_GATEWAY_API_KEY:-}
       SMS_SENDER_ID: ${SMS_SENDER_ID:-MIN-LANDS}
-      SEED_DEMO: ${SEED_DEMO:-true}
-      SEED_DEMO_COUNT: ${SEED_DEMO_COUNT:-40}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      SEED_DEMO_COUNT: ${SEED_DEMO_COUNT:-0}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
     volumes:
       - media_data:/app/media
