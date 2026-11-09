@@ -11,13 +11,13 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 USER root
 RUN apk add --no-cache openssl curl \
-    && mkdir -p /etc/nginx/certs /app/staticfiles \
+    && mkdir -p /etc/nginx/certs \
     && openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
        -keyout /etc/nginx/certs/selfsigned.key \
        -out /etc/nginx/certs/selfsigned.crt \
        -subj "/C=ZW/ST=Harare/L=Harare/O=Ministry of Lands and Rural Development/CN=land.applications" \
        -addext "subjectAltName=DNS:land.applications,IP:10.100.7.189,DNS:localhost" \
-    && chown -R nginx:nginx /etc/nginx/certs /app/staticfiles
+    && chown -R nginx:nginx /etc/nginx/certs
 
 COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
