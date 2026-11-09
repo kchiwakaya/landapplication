@@ -37,9 +37,11 @@ from .constants import (
     Title,
 )
 from .filters import ApplicationFilter
-from .models import Activity, Attachment, LandApplication
+from .models import Activity, ApplicantNotification, Attachment, LandApplication
+from .notifications import notify_farmer
 from .serializers import (
     ActivitySerializer,
+    ApplicantNotificationSerializer,
     ApplicationDetailSerializer,
     ApplicationListSerializer,
     AttachmentSerializer,
@@ -76,7 +78,9 @@ class ApplicationViewSet(
             qs = qs.annotate(attachment_count=Count("attachments"))
         else:
             qs = qs.prefetch_related(
-                "attachments__uploaded_by", "reviews__recorded_by"
+                "attachments__uploaded_by",
+                "reviews__recorded_by",
+                "notifications__triggered_by",
             )
         if self.request.query_params.get("queue") == "mine":
             qs = qs.filter(status=ROLE_QUEUE.get(self.request.user.role, "__none__"))
@@ -94,9 +98,10 @@ class ApplicationViewSet(
         application = serializer.save(created_by=user)
         workflow.log(
             application, user, Activity.Verb.CREATED,
-            message=f"Captured from {application.get_source_display().lower()}",
+            message="Captured application at Head Office",
             to_status=application.status,
         )
+        notify_farmer(application, ApplicantNotification.Event.RECEIVED, actor=user)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -149,6 +154,32 @@ class ApplicationViewSet(
         application = self.get_object()
         qs = application.activities.select_related("actor")
         return Response(ActivitySerializer(qs, many=True).data)
+
+    @action(detail=True, methods=["post"])
+    def notify(self, request, reference=None):
+        application = self.get_object()
+        event = request.data.get("event") or (
+            ApplicantNotification.Event.APPROVED
+            if application.status == Status.APPROVED
+            else ApplicantNotification.Event.RECEIVED
+        )
+        if event not in (
+            ApplicantNotification.Event.RECEIVED,
+            ApplicantNotification.Event.APPROVED,
+        ):
+            raise ValidationError({"event": "Unsupported notification stage."})
+        if (
+            event == ApplicantNotification.Event.APPROVED
+            and application.status != Status.APPROVED
+        ):
+            raise ValidationError(
+                {"detail": "Approval notification can only be sent once the application is approved."}
+            )
+        dispatched = notify_farmer(application, event, actor=request.user)
+        return Response(
+            ApplicantNotificationSerializer(dispatched, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     # ---- attachments -----------------------------------------------------------------
     @action(detail=True, methods=["get", "post"], url_path="attachments")

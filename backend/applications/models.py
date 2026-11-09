@@ -64,7 +64,7 @@ class LandApplication(models.Model):
     reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     application_no = models.CharField(max_length=32, unique=True, editable=False)
     province = models.CharField(
-        max_length=32, choices=Province.choices, help_text="Receiving province office."
+        max_length=32, choices=Province.choices, blank=True, help_text="Province on form header."
     )
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.WALK_IN)
     date_received = models.DateField(default=timezone.localdate)
@@ -78,7 +78,7 @@ class LandApplication(models.Model):
     other_names = models.CharField(max_length=120)
     sex = models.CharField(max_length=8, choices=Sex.choices)
     marital_status = models.CharField(max_length=12, choices=MaritalStatus.choices)
-    national_id = models.CharField("R.C. No. / I.D. No.", max_length=20, db_index=True)
+    national_id = models.CharField("National ID", max_length=20, db_index=True)
     date_of_birth = models.DateField(null=True, blank=True)
     categories = ArrayField(
         models.CharField(max_length=24, choices=ApplicantCategory.choices),
@@ -157,6 +157,8 @@ class LandApplication(models.Model):
         self.national_id = normalise_national_id(self.national_id)
         self.surname = self.surname.strip().upper()
         self.other_names = self.other_names.strip().upper()
+        if not self.province:
+            self.province = self.preferred_province
         if not self.application_no:
             year = (self.date_received or timezone.localdate()).year
             self.application_no = ApplicationSequence.next_number(self.province, year)
@@ -234,6 +236,7 @@ class Activity(models.Model):
         WITHDRAWN = "withdrawn", "Withdrew application"
         ASSIGNED = "assigned", "Assigned officer"
         NOTE = "note", "Added note"
+        NOTIFIED = "notified", "Notified applicant"
 
     application = models.ForeignKey(
         LandApplication, on_delete=models.CASCADE, related_name="activities"
@@ -254,4 +257,56 @@ class Activity(models.Model):
 
     def __str__(self) -> str:
         return f"{self.application.application_no} – {self.get_verb_display()}"
+
+
+class ApplicantNotification(models.Model):
+    """
+    Record of SMS / Email notifications dispatched to the farmer (applicant)
+    at key stages:
+      1. Application received
+      2. Application approved
+    """
+
+    class Event(models.TextChoices):
+        RECEIVED = "application_received", "Application received"
+        APPROVED = "application_approved", "Application approved"
+
+    class Channel(models.TextChoices):
+        SMS = "sms", "SMS"
+        EMAIL = "email", "Email"
+
+    class DeliveryStatus(models.TextChoices):
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
+    application = models.ForeignKey(
+        LandApplication, on_delete=models.CASCADE, related_name="notifications"
+    )
+    event = models.CharField(max_length=32, choices=Event.choices)
+    channel = models.CharField(max_length=12, choices=Channel.choices)
+    recipient = models.CharField(max_length=200)
+    subject = models.CharField(max_length=200, blank=True)
+    body = models.TextField()
+    status = models.CharField(
+        max_length=12, choices=DeliveryStatus.choices, default=DeliveryStatus.SENT
+    )
+    error_message = models.TextField(blank=True)
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-sent_at"]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.application.application_no} – {self.get_event_display()} "
+            f"({self.get_channel_display()} to {self.recipient})"
+        )
+
 

@@ -93,7 +93,7 @@ export default function PrintApplicationPage() {
               label="(e) MARITAL STATUS"
               value={label("marital_statuses", app.marital_status).toUpperCase()}
             />
-            <Line label="(f) R. C. NO./I.D. No" value={app.national_id} />
+            <Line label="(f) NATIONAL ID" value={app.national_id} />
           </div>
 
           <p className="mt-3 text-[12.5px] font-semibold uppercase">2. Address</p>

@@ -81,7 +81,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("POSTGRES_DB", "land_applications"),
         "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "root"),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         "CONN_MAX_AGE": 60,
@@ -115,6 +115,27 @@ ATTACHMENT_ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"]
 DATA_UPLOAD_MAX_MEMORY_SIZE = (ATTACHMENT_MAX_MB + 2) * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
+# ---- Farmer notifications (Email & SMS) -----------------------------------------
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "Ministry of Lands and Rural Development <noreply@lands.gov.zw>",
+)
+
+# Optional HTTP SMS gateway endpoint. When blank, SMS messages are logged locally
+# and recorded as sent in ApplicantNotification so development works without keys.
+SMS_GATEWAY_URL = os.getenv("SMS_GATEWAY_URL", "")
+SMS_GATEWAY_API_KEY = os.getenv("SMS_GATEWAY_API_KEY", "")
+SMS_SENDER_ID = os.getenv("SMS_SENDER_ID", "MIN-LANDS")
+
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -143,13 +164,30 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = env_list(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://land.applications,https://land.applications",
+)
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://land.applications,https://land.applications,http://10.100.7.180,https://10.100.7.180",
 )
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
 if not DEBUG:
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = (
+        "rest_framework.renderers.JSONRenderer",
+    )
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = "DENY"
+    USE_X_FORWARDED_HOST = True
+    SESSION_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
+    CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", False)
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+

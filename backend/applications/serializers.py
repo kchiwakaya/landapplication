@@ -8,7 +8,15 @@ from accounts.models import User
 
 from . import workflow
 from .constants import DISTRICTS, OUTCOME_LABELS, FarmingType, Outcome, Stage
-from .models import NATIONAL_ID_RE, Activity, Attachment, LandApplication, Review, normalise_national_id
+from .models import (
+    NATIONAL_ID_RE,
+    Activity,
+    ApplicantNotification,
+    Attachment,
+    LandApplication,
+    Review,
+    normalise_national_id,
+)
 from .validators import validate_attachment
 
 
@@ -126,6 +134,32 @@ class ActivitySerializer(serializers.ModelSerializer):
         ]
 
 
+class ApplicantNotificationSerializer(serializers.ModelSerializer):
+    event_display = serializers.CharField(source="get_event_display", read_only=True)
+    channel_display = serializers.CharField(source="get_channel_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    triggered_by = OfficerSummarySerializer(read_only=True)
+
+    class Meta:
+        model = ApplicantNotification
+        fields = [
+            "id",
+            "event",
+            "event_display",
+            "channel",
+            "channel_display",
+            "recipient",
+            "subject",
+            "body",
+            "status",
+            "status_display",
+            "error_message",
+            "triggered_by",
+            "sent_at",
+        ]
+
+
+
 class ApplicationListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -174,6 +208,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
     reviews = ReviewSerializer(many=True, read_only=True)
+    notifications = ApplicantNotificationSerializer(many=True, read_only=True)
     created_by = OfficerSummarySerializer(read_only=True)
     assigned_to = OfficerSummarySerializer(read_only=True)
     assigned_to_id = serializers.PrimaryKeyRelatedField(

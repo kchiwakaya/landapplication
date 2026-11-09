@@ -26,15 +26,16 @@ from applications.constants import (
     Source,
     Title,
 )
-from applications.models import Activity, Attachment, LandApplication
+from applications.models import Activity, ApplicantNotification, Attachment, LandApplication
+from applications.notifications import notify_farmer
 
 PASSWORD = "Lands@2026"
 
 OFFICERS = [
     ("admin", "Tendai", "Moyo", Role.ADMIN, ""),
-    ("capture", "Rutendo", "Chikwanha", Role.CAPTURE_OFFICER, Province.MASH_EAST),
-    ("clo", "Farai", "Mutasa", Role.LAND_OFFICER, Province.MASH_EAST),
-    ("committee", "Nyasha", "Gumbo", Role.COMMITTEE, Province.MASH_EAST),
+    ("capture", "Rutendo", "Chikwanha", Role.CAPTURE_OFFICER, ""),
+    ("clo", "Farai", "Mutasa", Role.LAND_OFFICER, ""),
+    ("committee", "Nyasha", "Gumbo", Role.COMMITTEE, ""),
     ("board", "Tafadzwa", "Ncube", Role.BOARD, ""),
     ("minister", "Chipo", "Dube", Role.MINISTER, ""),
 ]
@@ -97,8 +98,8 @@ class Command(BaseCommand):
             received = today - timedelta(days=rng.randint(0, 330))
             title = Title.MR if sex == Sex.MALE else rng.choice([Title.MRS, Title.MISS])
             app = LandApplication.objects.create(
-                province=Province.MASH_EAST,
-                source=rng.choice(list(Source)),
+                province=pref_province,
+                source=Source.ONLINE,
                 date_received=received,
                 title=title,
                 surname=surname,
@@ -124,6 +125,7 @@ class Command(BaseCommand):
                 application=app, actor=capture, verb=Activity.Verb.CREATED,
                 to_status=app.status, message="Captured from seed data",
             )
+            notify_farmer(app, ApplicantNotification.Event.RECEIVED, actor=capture)
             for doc in (AttachmentType.NATIONAL_ID, AttachmentType.CASH_FLOW):
                 if rng.random() < 0.85:
                     att = Attachment(

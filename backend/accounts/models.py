@@ -52,5 +52,6 @@ class User(AbstractUser):
 
     @property
     def is_provincial(self) -> bool:
-        return not self.is_admin and self.role in PROVINCIAL_ROLES and bool(self.province)
+        # All applications are captured and processed centrally at Head Office.
+        return False
 

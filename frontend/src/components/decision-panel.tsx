@@ -81,7 +81,11 @@ export function DecisionActionCard({ application }: { application: ApplicationDe
         allocated_unit: showAllocation ? allocatedUnit : "",
         allocated_hectares: showAllocation && allocatedHectares ? allocatedHectares : null,
       });
-      toast.success(`Section ${stage?.code} decision recorded.`);
+      if (stage?.code === "G" && outcome === "positive") {
+        toast.success("Application approved and approval notification sent to farmer.");
+      } else {
+        toast.success(`Section ${stage?.code} decision recorded.`);
+      }
       setComments("");
     } catch (err) {
       toast.error(errorMessage(err, "Could not record decision."));

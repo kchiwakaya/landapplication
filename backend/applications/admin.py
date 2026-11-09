@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Activity, Attachment, LandApplication, Review
+from .models import Activity, ApplicantNotification, Attachment, LandApplication, Review
 
 
 class AttachmentInline(admin.TabularInline):
@@ -39,4 +39,24 @@ class ActivityAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(ApplicantNotification)
+class ApplicantNotificationAdmin(admin.ModelAdmin):
+    list_display = ("application", "event", "channel", "recipient", "status", "sent_at")
+    list_filter = ("event", "channel", "status")
+    search_fields = ("application__application_no", "recipient", "subject")
+    readonly_fields = (
+        "application",
+        "event",
+        "channel",
+        "recipient",
+        "subject",
+        "body",
+        "status",
+        "error_message",
+        "triggered_by",
+        "sent_at",
+    )
+
 

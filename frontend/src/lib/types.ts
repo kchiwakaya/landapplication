@@ -107,6 +107,24 @@ export interface Activity {
   created_at: string;
 }
 
+export type NotificationEvent = "application_received" | "application_approved";
+
+export interface ApplicantNotification {
+  id: number;
+  event: NotificationEvent;
+  event_display: string;
+  channel: "sms" | "email";
+  channel_display: string;
+  recipient: string;
+  subject: string;
+  body: string;
+  status: "sent" | "failed";
+  status_display: string;
+  error_message: string;
+  triggered_by: OfficerSummary | null;
+  sent_at: string;
+}
+
 export interface ApplicationListItem {
   id: number;
   reference: string;
@@ -178,6 +196,7 @@ export interface ApplicationDetail extends ApplicationInput {
   allocated_hectares: string | null;
   attachments: Attachment[];
   reviews: Review[];
+  notifications: ApplicantNotification[];
   created_by: OfficerSummary;
   assigned_to: OfficerSummary | null;
   missing_attachments: string[];

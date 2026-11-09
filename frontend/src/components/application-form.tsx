@@ -266,6 +266,8 @@ export function ApplicationForm({
       await onSubmit(
         {
           ...values,
+          province: values.preferred_province,
+          source: defaultValues?.source || "online",
           date_of_birth: values.date_of_birth || null,
         },
         queued,
@@ -281,64 +283,9 @@ export function ApplicationForm({
 
   const errors = form.formState.errors;
   const submitting = form.formState.isSubmitting;
-  const lockProvince = Boolean(user?.province && user.role !== "admin");
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="divide-y">
-      {/* Registry Metadata */}
-      <FormSection
-        title="Registry Intake"
-        description="Record where and how this application form was received by the Ministry."
-      >
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Receiving Province Office" required error={errors.province?.message}>
-            <Controller
-              control={form.control}
-              name="province"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={lockProvince}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select province" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meta?.provinces.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>
-                        {p.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-
-          <Field label="Submission Channel" required error={errors.source?.message}>
-            <Controller
-              control={form.control}
-              name="source"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meta?.sources.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-
-          <Field label="Date Received" required error={errors.date_received?.message}>
-            <Input type="date" max={today} {...form.register("date_received")} />
-          </Field>
-        </div>
-      </FormSection>
-
       {/* Section A: Particulars of the Applicant */}
       <FormSection
         letter="A"
@@ -438,7 +385,7 @@ export function ApplicationForm({
           </Field>
 
           <Field
-            label="1(f) R.C. No. / National I.D. No."
+            label="1(f) National ID"
             required
             hint="Format: 63-1234567A89"
             error={errors.national_id?.message}

@@ -31,7 +31,9 @@ export default function NewApplicationPage() {
           );
         }
       }
-      toast.success(`Application ${created.application_no} captured.`);
+      toast.success(
+        `Application ${created.application_no} captured and receipt notification sent to farmer.`,
+      );
       navigate(`/applications/${created.reference}`);
     } catch (err) {
       toast.error(errorMessage(err, "Please check the highlighted fields."));

@@ -3,11 +3,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "@/lib/api";
 import type {
   Activity,
+  ApplicantNotification,
   ApplicationDetail,
   ApplicationInput,
   ApplicationListItem,
   Attachment,
   Meta,
+  NotificationEvent,
   Paginated,
   Review,
   Stats,
@@ -149,6 +151,15 @@ export function useApplicationAction(ref: string, action: "resubmit" | "withdraw
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) =>
       (await api.post(`/applications/${ref}/${action}/`, payload)).data,
+    onSuccess: invalidate,
+  });
+}
+
+export function useNotifyFarmer(ref: string) {
+  const invalidate = useInvalidateApplication(ref);
+  return useMutation({
+    mutationFn: async (event: NotificationEvent) =>
+      (await api.post<ApplicantNotification[]>(`/applications/${ref}/notify/`, { event })).data,
     onSuccess: invalidate,
   });
 }

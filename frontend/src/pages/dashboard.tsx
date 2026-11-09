@@ -60,11 +60,7 @@ export default function DashboardPage() {
       <PageHeader
         eyebrow={format(new Date(), "EEEE, d MMMM yyyy")}
         title={`${greeting()}, ${user?.first_name || user?.username}`}
-        description={
-          user?.province_display
-            ? `Showing applications received at the ${user.province_display} provincial office.`
-            : "Showing applications from all provincial offices."
-        }
+        description="Head Office · Land Reform and Resettlement Programme (Phase II, Model A2)"
         actions={
           hasRole("capture_officer", "land_officer") && (
             <Button asChild>

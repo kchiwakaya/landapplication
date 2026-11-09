@@ -2,12 +2,17 @@ import {
   AlertTriangle,
   ArrowLeft,
   Ban,
+  Bell,
+  CheckCircle2,
   Edit3,
   FileWarning,
   Loader2,
+  Mail,
   MessageSquarePlus,
   Printer,
   RotateCcw,
+  Send,
+  Smartphone,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
@@ -41,7 +46,9 @@ import {
   useApplication,
   useApplicationAction,
   useLabel,
+  useNotifyFarmer,
 } from "@/lib/queries";
+import type { ApplicantNotification, NotificationEvent } from "@/lib/types";
 
 export default function ApplicationDetailPage() {
   const { reference } = useParams<{ reference: string }>();
@@ -52,12 +59,15 @@ export default function ApplicationDetailPage() {
   const resubmit = useApplicationAction(reference ?? "", "resubmit");
   const withdraw = useApplicationAction(reference ?? "", "withdraw");
   const addNote = useApplicationAction(reference ?? "", "notes");
+  const notifyFarmer = useNotifyFarmer(reference ?? "");
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState("");
   const [resubmitOpen, setResubmitOpen] = useState(false);
   const [resubmitNote, setResubmitNote] = useState("");
   const [noteText, setNoteText] = useState("");
+  const [selectedNotification, setSelectedNotification] =
+    useState<ApplicantNotification | null>(null);
 
   if (isLoading) {
     return (
@@ -101,13 +111,13 @@ export default function ApplicationDetailPage() {
           <span className="inline-flex flex-wrap items-center gap-2.5">
             <span className="ref text-foreground">{app.application_no}</span>
             <span>·</span>
-            <span>{label("provinces", app.province)} Office</span>
+            <span>Head Office</span>
             <span>·</span>
             <StatusBadge status={app.status} />
           </span>
         }
         title={app.full_name}
-        description={`National ID ${app.national_id} · Received ${formatDate(app.date_received)} via ${label("sources", app.source)}`}
+        description={`National ID ${app.national_id} · Received ${formatDate(app.date_received)} · Preferred area: ${app.preferred_district}, ${label("provinces", app.preferred_province)}`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -218,7 +228,7 @@ export default function ApplicationDetailPage() {
                     <Datum label="1(e) Marital Status">
                       {label("marital_statuses", app.marital_status)}
                     </Datum>
-                    <Datum label="1(f) R.C. No. / I.D. No." mono>
+                    <Datum label="1(f) National ID" mono>
                       {app.national_id}
                     </Datum>
                     <Datum label="Date of Birth">{formatDate(app.date_of_birth)}</Datum>
@@ -385,8 +395,132 @@ export default function ApplicationDetailPage() {
               />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="size-4 text-primary" />
+                <CardTitle>Farmer Notifications</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3.5">
+              {(
+                [
+                  {
+                    event: "application_received" as NotificationEvent,
+                    title: "1. Application received",
+                    active: true,
+                  },
+                  {
+                    event: "application_approved" as NotificationEvent,
+                    title: "2. Application approved",
+                    active: app.status === "approved",
+                  },
+                ] as const
+              ).map((stage) => {
+                const items = (app.notifications ?? []).filter((n) => n.event === stage.event);
+                const latest = items[0];
+                return (
+                  <div
+                    key={stage.event}
+                    className="rounded-md border bg-muted/30 p-3 text-[12.5px]"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-foreground">{stage.title}</span>
+                      {latest ? (
+                        <Badge variant={latest.status === "sent" ? "forest" : "earth"}>
+                          <CheckCircle2 className="size-3" /> {latest.status_display}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">
+                          {stage.active ? "Not sent" : "Pending approval"}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {items.length > 0 ? (
+                      <ul className="mt-2 space-y-1.5">
+                        {items.slice(0, 2).map((n) => (
+                          <li
+                            key={n.id}
+                            onClick={() => setSelectedNotification(n)}
+                            className="flex cursor-pointer items-center justify-between gap-2 rounded bg-card px-2 py-1 text-[11.5px] transition-colors hover:bg-accent"
+                          >
+                            <span className="flex min-w-0 items-center gap-1.5 truncate">
+                              {n.channel === "sms" ? (
+                                <Smartphone className="size-3 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <Mail className="size-3 shrink-0 text-muted-foreground" />
+                              )}
+                              <span className="font-medium">{n.channel_display}:</span>
+                              <span className="truncate text-muted-foreground">{n.recipient}</span>
+                            </span>
+                            <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground">
+                              {formatDate(n.sent_at, "d MMM HH:mm")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-[11.5px] text-muted-foreground">
+                        {stage.event === "application_received"
+                          ? "Sent automatically on capture."
+                          : "Sent automatically when Section G is approved by the Minister."}
+                      </p>
+                    )}
+
+                    {stage.active && (
+                      <div className="mt-2.5 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11.5px]"
+                          disabled={notifyFarmer.isPending}
+                          onClick={async () => {
+                            try {
+                              await notifyFarmer.mutateAsync(stage.event);
+                              toast.success(`${stage.title} notification dispatched to farmer.`);
+                            } catch (err) {
+                              toast.error(errorMessage(err));
+                            }
+                          }}
+                        >
+                          <Send className="size-3" />
+                          {latest ? "Resend notice" : "Send notice"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Notification preview dialog */}
+      <Dialog
+        open={!!selectedNotification}
+        onOpenChange={(o) => !o && setSelectedNotification(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedNotification?.event_display}</DialogTitle>
+            <DialogDescription>
+              {selectedNotification?.channel_display} sent to{" "}
+              <span className="font-mono text-foreground">{selectedNotification?.recipient}</span>{" "}
+              on {formatDateTime(selectedNotification?.sent_at)}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNotification?.subject && (
+            <p className="text-[12.5px] font-medium">{selectedNotification.subject}</p>
+          )}
+          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-3 font-sans text-[12.5px] leading-relaxed">
+            {selectedNotification?.body}
+          </pre>
+        </DialogContent>
+      </Dialog>
 
       {/* Resubmit dialog */}
       <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>

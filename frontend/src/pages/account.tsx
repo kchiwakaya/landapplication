@@ -67,7 +67,7 @@ export default function AccountPage() {
       <PageHeader
         eyebrow="Officer Account"
         title={user.full_name}
-        description={`${user.role_display}${user.province_display ? ` · ${user.province_display} Province` : " · National Office"}`}
+        description={`${user.role_display} · Head Office`}
       />
 
       <div className="grid gap-6">
@@ -81,7 +81,7 @@ export default function AccountPage() {
                 {user.username}
               </Datum>
               <Datum label="Workflow Role">{user.role_display}</Datum>
-              <Datum label="Assigned Office">{user.province_display || "National"}</Datum>
+              <Datum label="Station">Head Office</Datum>
             </dl>
           </CardContent>
         </Card>

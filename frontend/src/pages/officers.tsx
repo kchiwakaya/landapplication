@@ -38,8 +38,6 @@ import { formatDateTime } from "@/lib/format";
 import { useMeta, useSaveUser, useUsers } from "@/lib/queries";
 import type { Role, User } from "@/lib/types";
 
-const PROVINCIAL_ROLES: Role[] = ["capture_officer", "land_officer", "committee"];
-
 export default function OfficersPage() {
   const { data: meta } = useMeta();
   const [search, setSearch] = useState("");
@@ -55,7 +53,7 @@ export default function OfficersPage() {
       last_name: "",
       email: "",
       role: "capture_officer",
-      province: "mashonaland_east",
+      province: "",
       employee_number: "",
       phone: "",
       is_active: true,
@@ -77,14 +75,12 @@ export default function OfficersPage() {
     }
   }
 
-  const needsProvince = editing?.role && PROVINCIAL_ROLES.includes(editing.role);
-
   return (
     <div>
       <PageHeader
-        eyebrow="Administration"
+        eyebrow="Administration · Head Office"
         title="Ministry Officers"
-        description="Manage officer accounts, workflow roles (Sections A–G) and provincial office assignments."
+        description="Manage Head Office officer accounts and workflow roles (Sections A–G)."
         actions={
           <Button onClick={openNew}>
             <UserPlus /> Add officer
@@ -133,7 +129,7 @@ export default function OfficersPage() {
                   </TableCell>
                   <TableCell className="ref">{u.username}</TableCell>
                   <TableCell>{u.role_display}</TableCell>
-                  <TableCell>{u.province_display || "National"}</TableCell>
+                  <TableCell>Head Office</TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDateTime(u.last_login)}
                   </TableCell>
@@ -163,8 +159,7 @@ export default function OfficersPage() {
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Edit Officer Account" : "New Officer Account"}</DialogTitle>
             <DialogDescription>
-              Provincial roles (Capture Officer, Chief Land Officer, Resettlement Committee) are
-              scoped to their assigned province.
+              Assign the officer's Head Office workflow role for processing Model A2 applications.
             </DialogDescription>
           </DialogHeader>
           {editing && (
@@ -204,46 +199,23 @@ export default function OfficersPage() {
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Workflow Role" required>
-                  <Select
-                    value={editing.role}
-                    onValueChange={(v) => setEditing({ ...editing, role: v as Role })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {meta?.roles.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <Field label="Provincial Office" required={Boolean(needsProvince)}>
-                  <Select
-                    value={editing.province || "__national__"}
-                    onValueChange={(v) =>
-                      setEditing({ ...editing, province: v === "__national__" ? "" : v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__national__">National (All provinces)</SelectItem>
-                      {meta?.provinces.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </div>
+              <Field label="Workflow Role" required>
+                <Select
+                  value={editing.role}
+                  onValueChange={(v) => setEditing({ ...editing, role: v as Role })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta?.roles.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="EC / Employee Number">

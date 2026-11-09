@@ -37,12 +37,6 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.get_full_name() or obj.username
 
     def validate(self, attrs):
-        role = attrs.get("role", getattr(self.instance, "role", None))
-        province = attrs.get("province", getattr(self.instance, "province", ""))
-        if role in PROVINCIAL_ROLES and not province:
-            raise serializers.ValidationError(
-                {"province": "A province is required for provincial roles."}
-            )
         if not self.instance and not attrs.get("password"):
             raise serializers.ValidationError({"password": "A password is required."})
         if attrs.get("password"):

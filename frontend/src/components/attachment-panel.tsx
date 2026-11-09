@@ -169,7 +169,7 @@ export function AttachmentPanel({ application }: { application: ApplicationDetai
         </CardHeader>
         <CardContent className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { code: "national_id", label: "National ID / R.C.", required: true },
+            { code: "national_id", label: "National ID", required: true },
             { code: "cash_flow", label: "5-Year Cash Flow Projection", required: true },
             { code: "training", label: "Proof of Training / Experience", required: false },
             { code: "funds", label: "Proof of Funds / Movable Assets", required: false },
