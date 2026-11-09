@@ -54,7 +54,7 @@ jobs:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.DEPLOY_HOST || '10.100.7.180' }}
+          host: ${{ secrets.DEPLOY_HOST || '10.100.7.189' }}
           username: ${{ secrets.DEPLOY_USER || 'p6060' }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -69,3 +69,4 @@ jobs:
             docker image prune -f
             sleep 5
             curl -fsS -H "Host: land.applications" http://127.0.0.1/api/health/
+

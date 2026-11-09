@@ -169,7 +169,7 @@ CORS_ALLOWED_ORIGINS = env_list(
 )
 CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
-    "http://land.applications,https://land.applications,http://10.100.7.180,https://10.100.7.180",
+    "http://land.applications,https://land.applications,http://10.100.7.189,https://10.100.7.189",
 )
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 

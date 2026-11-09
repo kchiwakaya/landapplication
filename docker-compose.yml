@@ -28,9 +28,9 @@ services:
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-land.applications,10.100.7.180,localhost,127.0.0.1}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://land.applications,https://land.applications,http://10.100.7.180,https://10.100.7.180}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://land.applications,https://land.applications,http://10.100.7.180,https://10.100.7.180}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-land.applications,10.100.7.189,localhost,127.0.0.1}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://land.applications,https://land.applications,http://10.100.7.189,https://10.100.7.189}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://land.applications,https://land.applications,http://10.100.7.189,https://10.100.7.189}
       POSTGRES_DB: ${POSTGRES_DB:-land_applications}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -91,3 +91,4 @@ volumes:
   pgdata:
   media_data:
   static_data:
+

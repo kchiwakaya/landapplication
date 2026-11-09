@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Hardened Server Bootstrap & Deployment Script for land.applications
-# Target: p6060@10.100.7.180 (Internal Domain: land.applications)
+# Target: p6060@10.100.7.189 (Internal Domain: land.applications)
 # ==============================================================================
 set -euo pipefail
 
 APP_DIR="/opt/landapplication"
 REPO_URL="https://github.com/kchiwakaya/landapplication.git"
 DOMAIN="land.applications"
-SERVER_IP="10.100.7.180"
+SERVER_IP="10.100.7.189"
 APP_USER="${SUDO_USER:-p6060}"
 
 echo "==> [1/6] Installing Docker, Git, and host hardening packages (ufw, fail2ban)..."
@@ -100,3 +100,4 @@ echo "==> WARNING: Healthcheck did not respond within timeout. Container status:
 sudo docker compose ps
 sudo docker compose logs --tail=50
 exit 1
+
