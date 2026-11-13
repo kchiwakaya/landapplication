@@ -314,3 +314,25 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
                 {"province": "You can only capture applications for your own province."}
             )
         return attrs
+
+
+class SmsGatewayDispatchSerializer(serializers.Serializer):
+    """
+    Serializer for testing or dispatching ad-hoc SMS messages through the
+    local Android SMS Gateway (`POST /api/sms-gateway/send/`).
+    """
+
+    phone_number = serializers.CharField(
+        max_length=40,
+        help_text="Recipient mobile phone number (e.g. +263771234567).",
+    )
+    message = serializers.CharField(
+        max_length=640,
+        help_text="SMS text body to dispatch via the Android device's SIM card.",
+    )
+    async_dispatch = serializers.BooleanField(
+        default=False,
+        required=False,
+        help_text="If true, schedules dispatch via transaction.on_commit background worker.",
+    )
+

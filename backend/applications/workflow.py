@@ -16,7 +16,7 @@ from accounts.models import Role
 
 from .constants import FINAL_STATUSES, OUTCOME_LABELS, AttachmentType, Outcome, Stage, Status
 from .models import Activity, ApplicantNotification, LandApplication, Review
-from .notifications import notify_farmer
+from .notifications import notify_farmer_async
 
 
 @dataclass(frozen=True)
@@ -173,7 +173,7 @@ def record_decision(application: LandApplication, user, data: dict) -> Review:
         stage=stage, outcome=outcome, review_id=review.pk,
     )
     if new_status == Status.APPROVED:
-        notify_farmer(application, ApplicantNotification.Event.APPROVED, actor=user)
+        notify_farmer_async(application, ApplicantNotification.Event.APPROVED, actor=user)
     return review
 
 

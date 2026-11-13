@@ -7,14 +7,14 @@ Dispatches SMS (to the applicant's primary phone number) and Email (if an
 email address was provided on the form), records each dispatch in
 `ApplicantNotification`, and appends an audit trail entry in `Activity`.
 """
-import json
 import logging
-from urllib import request as urllib_request
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from .models import Activity, ApplicantNotification, LandApplication
+from .sms_gateway import run_after_commit_async, send_sms_via_android_gateway
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,15 @@ def _applicant_phone(app: LandApplication) -> str:
 
 def _compose_received(app: LandApplication) -> tuple[str, str, str]:
     title_name = f"{app.get_title_display()} {app.full_name}"
+    d = app.date_received or timezone.localdate()
+    receipt_date = f"{d.day} {d.strftime('%B %Y')}"
 
     sms_body = (
-        f"MINISTRY OF LANDS: Dear {title_name}, we have received your application "
-        f"(Form No. {app.application_no}) and once land is available you will be notified."
+        f"We acknowledge receipt of your application for land under the Land Reform "
+        f"and National Resettlement Programme, dated {receipt_date}.\n"
+        f"Please note that the Ministry is currently processing your application. "
+        f"You will be contacted as and when land becomes available.\n"
+        f"Thank you for your patience."
     )
 
     subject = f"Application Received – Form No. {app.application_no}"
@@ -37,8 +42,12 @@ def _compose_received(app: LandApplication) -> tuple[str, str, str]:
         f"Land Reform and Resettlement Programme (Phase II, Model A2)\n"
         f"------------------------------------------------------------\n\n"
         f"Dear {title_name},\n\n"
-        f"We have received your application (Application Form No. {app.application_no}) "
-        f"and once land is available you will be notified.\n\n"
+        f"We acknowledge receipt of your application for land under the Land Reform "
+        f"and National Resettlement Programme, dated {receipt_date}.\n\n"
+        f"Please note that the Ministry is currently processing your application. "
+        f"You will be contacted as and when land becomes available.\n\n"
+        f"Thank you for your patience.\n\n"
+        f"Application Form No.: {app.application_no}\n\n"
         f"Yours faithfully,\n"
         f"Ministry of Lands and Rural Development (Head Office)"
     )
@@ -91,29 +100,10 @@ def _compose_approved(app: LandApplication) -> tuple[str, str, str]:
 
 
 def _send_sms(recipient: str, body: str) -> tuple[str, str]:
-    gateway_url = getattr(settings, "SMS_GATEWAY_URL", "").strip()
-    if not gateway_url:
-        logger.info("SMS [%s]: %s", recipient, body)
+    result = send_sms_via_android_gateway(phone_number=recipient, message=body)
+    if result.success:
         return ApplicantNotification.DeliveryStatus.SENT, ""
-
-    try:
-        payload = json.dumps({
-            "to": recipient,
-            "from": getattr(settings, "SMS_SENDER_ID", "MIN-LANDS"),
-            "message": body,
-        }).encode("utf-8")
-        headers = {"Content-Type": "application/json"}
-        api_key = getattr(settings, "SMS_GATEWAY_API_KEY", "").strip()
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-        req = urllib_request.Request(gateway_url, data=payload, headers=headers, method="POST")
-        with urllib_request.urlopen(req, timeout=8) as resp:  # noqa: S310
-            if 200 <= resp.status < 300:
-                return ApplicantNotification.DeliveryStatus.SENT, ""
-            return ApplicantNotification.DeliveryStatus.FAILED, f"Gateway HTTP {resp.status}"
-    except Exception as exc:
-        logger.warning("SMS gateway error for %s: %s", recipient, exc)
-        return ApplicantNotification.DeliveryStatus.FAILED, str(exc)
+    return ApplicantNotification.DeliveryStatus.FAILED, result.error_message
 
 
 def _send_email(recipient: str, subject: str, body: str) -> tuple[str, str]:
@@ -201,3 +191,29 @@ def notify_farmer(
         )
 
     return dispatched
+
+
+def _notify_farmer_by_ids(application_id: int, event: str, actor_id: int | None) -> None:
+    from accounts.models import User
+
+    application = LandApplication.objects.filter(pk=application_id).first()
+    if not application:
+        return
+    actor = User.objects.filter(pk=actor_id).first() if actor_id else None
+    notify_farmer(application, event, actor=actor)
+
+
+def notify_farmer_async(
+    application: LandApplication,
+    event: str,
+    actor=None,
+) -> None:
+    """
+    Non-blocking wrapper around `notify_farmer` that schedules SMS & Email
+    dispatch via `transaction.on_commit` onto a background worker thread.
+    Ensures HTTP responses never block on Android Wi-Fi or SMTP network I/O.
+    """
+    app_id = application.pk
+    actor_id = getattr(actor, "pk", None)
+    run_after_commit_async(_notify_farmer_by_ids, app_id, event, actor_id)
+

@@ -129,10 +129,19 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "Ministry of Lands and Rural Development <noreply@lands.gov.zw>",
 )
 
-# Optional HTTP SMS gateway endpoint. When blank, SMS messages are logged locally
-# and recorded as sent in ApplicantNotification so development works without keys.
-SMS_GATEWAY_URL = os.getenv("SMS_GATEWAY_URL", "")
-SMS_GATEWAY_API_KEY = os.getenv("SMS_GATEWAY_API_KEY", "")
+# Optional Android / HTTP SMS gateway endpoint. When blank, SMS messages are logged
+# locally and recorded as sent in ApplicantNotification so development works without keys.
+ANDROID_SMS_GATEWAY_URL = os.getenv(
+    "ANDROID_SMS_GATEWAY_URL", os.getenv("SMS_GATEWAY_URL", "")
+)
+SMS_GATEWAY_SECRET_KEY = os.getenv(
+    "SMS_GATEWAY_SECRET_KEY", os.getenv("SMS_GATEWAY_API_KEY", "")
+)
+SMS_GATEWAY_TIMEOUT_SECONDS = float(os.getenv("SMS_GATEWAY_TIMEOUT_SECONDS", "8"))
+
+# Legacy aliases preserved for backward compatibility
+SMS_GATEWAY_URL = ANDROID_SMS_GATEWAY_URL
+SMS_GATEWAY_API_KEY = SMS_GATEWAY_SECRET_KEY
 SMS_SENDER_ID = os.getenv("SMS_SENDER_ID", "MIN-LANDS")
 
 

@@ -38,7 +38,7 @@ from .constants import (
 )
 from .filters import ApplicationFilter
 from .models import Activity, ApplicantNotification, Attachment, LandApplication
-from .notifications import notify_farmer
+from .notifications import notify_farmer, notify_farmer_async
 from .serializers import (
     ActivitySerializer,
     ApplicantNotificationSerializer,
@@ -47,7 +47,9 @@ from .serializers import (
     AttachmentSerializer,
     DecisionSerializer,
     ReviewSerializer,
+    SmsGatewayDispatchSerializer,
 )
+from .sms_gateway import dispatch_sms_async, send_sms_via_android_gateway
 
 ROLE_QUEUE = {rule.role: rule.from_status for rule in workflow.STAGE_RULES.values()}
 
@@ -101,7 +103,7 @@ class ApplicationViewSet(
             message="Captured application at Head Office",
             to_status=application.status,
         )
-        notify_farmer(application, ApplicantNotification.Event.RECEIVED, actor=user)
+        notify_farmer_async(application, ApplicantNotification.Event.RECEIVED, actor=user)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -380,4 +382,61 @@ class MetaView(APIView):
             "farm_size_schedule": FARM_SIZE_SCHEDULE,
             "peri_urban_size": PERI_URBAN_SIZE,
         })
+
+
+class SmsGatewayDispatchView(APIView):
+    """
+    Sample & diagnostic API endpoint (`GET/POST /api/sms-gateway/send/`) for
+    checking the Android SMS Gateway configuration and dispatching an SMS
+    either synchronously or asynchronously (`async_dispatch=true`).
+    """
+
+    def get(self, request):
+        from django.conf import settings
+
+        gateway_url = getattr(settings, "ANDROID_SMS_GATEWAY_URL", "")
+        has_secret = bool(getattr(settings, "SMS_GATEWAY_SECRET_KEY", ""))
+        return Response({
+            "configured": bool(gateway_url),
+            "gateway_url": gateway_url or None,
+            "secret_key_configured": has_secret,
+            "timeout_seconds": getattr(settings, "SMS_GATEWAY_TIMEOUT_SECONDS", 8.0),
+        })
+
+    def post(self, request):
+        user = request.user
+        if not (user.is_admin or user.role in (Role.CAPTURE_OFFICER, Role.LAND_OFFICER)):
+            raise PermissionDenied("Your role cannot dispatch manual SMS notifications.")
+
+        serializer = SmsGatewayDispatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone_number = serializer.validated_data["phone_number"]
+        message = serializer.validated_data["message"]
+        async_dispatch = serializer.validated_data.get("async_dispatch", False)
+
+        if async_dispatch:
+            dispatch_sms_async(phone_number=phone_number, message=message)
+            return Response(
+                {
+                    "queued": True,
+                    "phone_number": phone_number,
+                    "detail": "SMS scheduled asynchronously via transaction.on_commit worker.",
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        result = send_sms_via_android_gateway(phone_number=phone_number, message=message)
+        http_status = status.HTTP_200_OK if result.success else status.HTTP_502_BAD_GATEWAY
+        return Response(
+            {
+                "success": result.success,
+                "simulated": result.simulated,
+                "gateway_status_code": result.status_code,
+                "error_message": result.error_message,
+                "gateway_response": result.response_payload,
+            },
+            status=http_status,
+        )
+
 
