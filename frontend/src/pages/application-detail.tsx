@@ -417,6 +417,14 @@ export default function ApplicationDetailPage() {
                 <Bell className="size-4 text-primary" />
                 <CardTitle>Farmer Notifications</CardTitle>
               </div>
+              <p className="mt-1 text-[11.5px] text-muted-foreground">
+                SMS:{" "}
+                <span className="font-mono text-foreground">
+                  {app.mobile_phone || app.residential_phone || app.business_phone || "—"}
+                </span>{" "}
+                · Email:{" "}
+                <span className="text-foreground">{app.email || "—"}</span>
+              </p>
             </CardHeader>
             <CardContent className="grid gap-3.5">
               {(
@@ -530,6 +538,11 @@ export default function ApplicationDetailPage() {
           </DialogHeader>
           {selectedNotification?.subject && (
             <p className="text-[12.5px] font-medium">{selectedNotification.subject}</p>
+          )}
+          {selectedNotification?.error_message && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+              <strong>Delivery error:</strong> {selectedNotification.error_message}
+            </div>
           )}
           <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-3 font-sans text-[12.5px] leading-relaxed">
             {selectedNotification?.body}
