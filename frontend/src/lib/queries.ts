@@ -107,6 +107,18 @@ export function useUpdateApplication(ref: string) {
   });
 }
 
+export function useDeleteApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ref: string) => api.delete(`/applications/${ref}/`),
+    onSuccess: (_data, ref) => {
+      qc.removeQueries({ queryKey: keys.application(ref) });
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      qc.invalidateQueries({ queryKey: keys.stats });
+    },
+  });
+}
+
 export function useUploadAttachment(ref: string) {
   const invalidate = useInvalidateApplication(ref);
   return useMutation({

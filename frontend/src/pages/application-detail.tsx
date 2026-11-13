@@ -13,9 +13,10 @@ import {
   RotateCcw,
   Send,
   Smartphone,
+  Trash2,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ScheduleDialog } from "@/components/application-form";
@@ -45,6 +46,7 @@ import {
   useActivity,
   useApplication,
   useApplicationAction,
+  useDeleteApplication,
   useLabel,
   useNotifyFarmer,
 } from "@/lib/queries";
@@ -52,6 +54,7 @@ import type { ApplicantNotification, NotificationEvent } from "@/lib/types";
 
 export default function ApplicationDetailPage() {
   const { reference } = useParams<{ reference: string }>();
+  const navigate = useNavigate();
   const { data: app, isLoading } = useApplication(reference);
   const { data: activities } = useActivity(reference ?? "");
   const label = useLabel();
@@ -60,9 +63,11 @@ export default function ApplicationDetailPage() {
   const withdraw = useApplicationAction(reference ?? "", "withdraw");
   const addNote = useApplicationAction(reference ?? "", "notes");
   const notifyFarmer = useNotifyFarmer(reference ?? "");
+  const deleteApp = useDeleteApplication();
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [resubmitOpen, setResubmitOpen] = useState(false);
   const [resubmitNote, setResubmitNote] = useState("");
   const [noteText, setNoteText] = useState("");
@@ -145,6 +150,16 @@ export default function ApplicationDetailPage() {
                 onClick={() => setWithdrawOpen(true)}
               >
                 <Ban /> Withdraw
+              </Button>
+            )}
+            {app.permissions.delete && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 /> Delete
               </Button>
             )}
           </>
@@ -557,6 +572,41 @@ export default function ApplicationDetailPage() {
             >
               {resubmit.isPending && <Loader2 className="animate-spin" />}
               Resubmit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Application {app.application_no}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes {app.full_name}&apos;s application along with its reviews,
+              activity logs, notifications, and uploaded attachments. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteApp.isPending}
+              onClick={async () => {
+                try {
+                  await deleteApp.mutateAsync(app.reference);
+                  toast.success(`Application ${app.application_no} deleted.`);
+                  setDeleteOpen(false);
+                  navigate("/applications", { replace: true });
+                } catch (err) {
+                  toast.error(errorMessage(err, "Could not delete application."));
+                }
+              }}
+            >
+              {deleteApp.isPending && <Loader2 className="animate-spin" />}
+              Delete permanently
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,10 +2,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Edit3,
   FilePlus2,
   FolderSearch,
+  Loader2,
   Paperclip,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -16,6 +19,14 @@ import { EmptyState, PageHeader } from "@/components/page";
 import { StatusBadge, statusLabel } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -36,8 +47,8 @@ import {
 import { downloadFile, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { useApplications, useMeta } from "@/lib/queries";
-import type { Status } from "@/lib/types";
+import { useApplications, useDeleteApplication, useMeta } from "@/lib/queries";
+import type { ApplicationListItem, Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STATUS_TABS: { value: string; label: string }[] = [
@@ -62,7 +73,17 @@ export default function ApplicationsPage({ queue = false }: { queue?: boolean })
   const farmType = searchParams.get("farm_type") ?? "";
   const page = Number(searchParams.get("page") ?? "1") || 1;
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
+  const [deleteTarget, setDeleteTarget] = useState<ApplicationListItem | null>(null);
+  const deleteApp = useDeleteApplication();
   const q = searchParams.get("q") ?? "";
+
+  function canModifyRow(item: ApplicationListItem) {
+    if (user?.role === "admin") return true;
+    if (user?.role === "capture_officer" || user?.role === "land_officer") {
+      return item.status === "received" || item.status === "queried";
+    }
+    return false;
+  }
 
   const queryParams: Record<string, unknown> = {
     page,
@@ -255,6 +276,7 @@ export default function ApplicationsPage({ queue = false }: { queue?: boolean })
                   <TableHead>Files</TableHead>
                   <TableHead>Received</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,6 +322,34 @@ export default function ApplicationsPage({ queue = false }: { queue?: boolean })
                     <TableCell>
                       <StatusBadge status={item.status} />
                     </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {canModifyRow(item) && (
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Edit particulars"
+                          >
+                            <Link to={`/applications/${item.reference}/edit`}>
+                              <Edit3 className="size-3.5" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            title="Delete application"
+                            onClick={() => setDeleteTarget(item)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -335,6 +385,41 @@ export default function ApplicationsPage({ queue = false }: { queue?: boolean })
           </>
         )}
       </Card>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Application {deleteTarget?.application_no}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes {deleteTarget?.full_name}&apos;s application along with its
+              reviews, activity logs, notifications, and uploaded attachments. This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteApp.isPending}
+              onClick={async () => {
+                if (!deleteTarget) return;
+                try {
+                  await deleteApp.mutateAsync(deleteTarget.reference);
+                  toast.success(`Application ${deleteTarget.application_no} deleted.`);
+                  setDeleteTarget(null);
+                } catch (err) {
+                  toast.error(errorMessage(err, "Could not delete application."));
+                }
+              }}
+            >
+              {deleteApp.isPending && <Loader2 className="animate-spin" />}
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

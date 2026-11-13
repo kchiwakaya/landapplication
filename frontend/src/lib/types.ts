@@ -207,7 +207,7 @@ export interface ApplicationDetail extends ApplicationInput {
     role_display: string;
     outcomes: Partial<Record<Outcome, string>>;
   } | null;
-  permissions: { edit: boolean; upload: boolean; decide: boolean; withdraw: boolean };
+  permissions: { edit: boolean; delete: boolean; upload: boolean; decide: boolean; withdraw: boolean };
   duplicates: { reference: string; application_no: string; status: Status; date_received: string }[];
   created_at: string;
   updated_at: string;

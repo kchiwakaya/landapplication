@@ -73,10 +73,20 @@ def can_decide(user, application: LandApplication) -> bool:
 
 
 def can_edit(user, application: LandApplication) -> bool:
-    if application.status not in (Status.RECEIVED, Status.QUERIED):
-        return False
     if user.is_admin:
         return True
+    if application.status not in (Status.RECEIVED, Status.QUERIED):
+        return False
+    if user.role not in (Role.CAPTURE_OFFICER, Role.LAND_OFFICER):
+        return False
+    return not user.is_provincial or user.province == application.province
+
+
+def can_delete(user, application: LandApplication) -> bool:
+    if user.is_admin:
+        return True
+    if application.status not in (Status.RECEIVED, Status.QUERIED):
+        return False
     if user.role not in (Role.CAPTURE_OFFICER, Role.LAND_OFFICER):
         return False
     return not user.is_provincial or user.province == application.province

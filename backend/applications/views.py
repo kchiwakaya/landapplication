@@ -66,6 +66,7 @@ class ApplicationViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     lookup_field = "reference"
@@ -120,6 +121,14 @@ class ApplicationViewSet(
                 message=", ".join(f.replace("_", " ") for f in changed),
                 fields=changed,
             )
+
+    def perform_destroy(self, instance):
+        if not workflow.can_delete(self.request.user, instance):
+            raise PermissionDenied("You do not have permission to delete this application.")
+        for attachment in instance.attachments.all():
+            if attachment.file:
+                attachment.file.delete(save=False)
+        instance.delete()
 
     # ---- workflow --------------------------------------------------------------------
     @action(detail=True, methods=["post"])

@@ -259,6 +259,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         return {
             "edit": workflow.can_edit(user, obj),
+            "delete": workflow.can_delete(user, obj),
             "upload": workflow.can_upload(user, obj),
             "decide": workflow.can_decide(user, obj),
             "withdraw": workflow.can_upload(user, obj),
